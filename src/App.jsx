@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import "./App.css";
 import { BRIDE_IMG, GROOM_IMG, COUPLE_IMG } from "./images";
+import { LANGS, translations, detectLang, saveLang } from "./i18n";
 
 // ── Countdown ─────────────────────────────────────────────────────────────────
 function useCountdown(targetDate) {
@@ -126,6 +127,23 @@ function BackgroundMusic({ play }) {
   );
 }
 
+// ── Language switcher ─────────────────────────────────────────────────────────
+function LanguageSwitcher({ lang, onChange }) {
+  return (
+    <div className="lang-switcher" role="group" aria-label="Language">
+      {LANGS.map(({ code, label }) => (
+        <button
+          key={code}
+          className={`lang-btn ${lang === code ? "lang-btn-active" : ""}`}
+          onClick={() => onChange(code)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Floating particles ────────────────────────────────────────────────────────
 function FloatingParticles() {
   const items = useMemo(
@@ -219,7 +237,7 @@ function OrnamentFrame({ children, className = "" }) {
 
 // ── Intro animation ───────────────────────────────────────────────────────────
 // Phases: 'enter' → 'slide' → 'merge' → 'burst' → 'done' (auto 5s total)
-function IntroAnimation({ onDone }) {
+function IntroAnimation({ onDone, t }) {
   const [phase, setPhase] = useState("enter");
 
   useEffect(() => {
@@ -258,7 +276,7 @@ function IntroAnimation({ onDone }) {
 
       {/* Top decorative text */}
       <div className={`intro-top-text ${isSlide ? "intro-top-visible" : ""}`}>
-        <span className="intro-save-date">SAVE THE DATE</span>
+        <span className="intro-save-date">{t.introSaveDate}</span>
         <span className="intro-date-line">23 · 08 · 2026</span>
       </div>
 
@@ -280,13 +298,13 @@ function IntroAnimation({ onDone }) {
 
       {/* Bride */}
       <div className={`intro-figure intro-bride ${isSlide ? "intro-slide-in" : ""}`}>
-        <img src={BRIDE_IMG} alt="Bride Prathiya" />
+        <img src={BRIDE_IMG} alt={t.altBride} />
         <div className="intro-figure-glow" />
       </div>
 
       {/* Groom */}
       <div className={`intro-figure intro-groom ${isSlide ? "intro-slide-in" : ""}`}>
-        <img src={GROOM_IMG} alt="Groom Kukeenthan" />
+        <img src={GROOM_IMG} alt={t.altGroom} />
         <div className="intro-figure-glow" />
       </div>
 
@@ -294,9 +312,9 @@ function IntroAnimation({ onDone }) {
       {isBurst && (
         <div className="intro-names-label">
           <div className="intro-name-line intro-name-line-left" />
-          <span className="intro-name-reveal">குகீந்தன்</span>
+          <span className="intro-name-reveal">{t.groomName}</span>
           <span className="intro-amp">&amp;</span>
-          <span className="intro-name-reveal">பிரதியா</span>
+          <span className="intro-name-reveal">{t.brideName}</span>
           <div className="intro-name-line intro-name-line-right" />
         </div>
       )}
@@ -304,7 +322,7 @@ function IntroAnimation({ onDone }) {
       {/* Bottom decorative text */}
       {isBurst && (
         <div className="intro-bottom-text">
-          <span>Wedding Invitation</span>
+          <span>{t.introBottom}</span>
         </div>
       )}
 
@@ -317,7 +335,7 @@ function IntroAnimation({ onDone }) {
 }
 
 // ── Countdown box ─────────────────────────────────────────────────────────────
-function CountdownBox({ label, labelTa, value, prevValue }) {
+function CountdownBox({ label, value }) {
   const [flip, setFlip] = useState(false);
   const prevRef = useRef(value);
 
@@ -333,15 +351,14 @@ function CountdownBox({ label, labelTa, value, prevValue }) {
   return (
     <div className={`countdown-box ${flip ? "countdown-flip" : ""}`}>
       <span className="countdown-value">{String(value).padStart(2, "0")}</span>
-      <span className="countdown-label">{labelTa}</span>
-      <span className="countdown-label-en">{label}</span>
+      <span className="countdown-label">{label}</span>
       <div className="countdown-glow" />
     </div>
   );
 }
 
 // ── Scroll indicator ──────────────────────────────────────────────────────────
-function ScrollIndicator() {
+function ScrollIndicator({ t }) {
   const [visible, setVisible] = useState(true);
   useEffect(() => {
     const handler = () => setVisible(window.scrollY < 100);
@@ -354,7 +371,7 @@ function ScrollIndicator() {
       <div className="scroll-mouse">
         <div className="scroll-wheel" />
       </div>
-      <span>Scroll Down</span>
+      <span>{t.scrollDown}</span>
     </div>
   );
 }
@@ -364,6 +381,19 @@ export default function App() {
   const [showIntro, setShowIntro] = useState(true);
   const [heroRef, heroOffset] = useParallax(0.15);
   const [coupleBlurRef, coupleBlur] = useScrollBlur();
+  const [lang, setLang] = useState(detectLang);
+  const t = translations[lang];
+
+  const changeLang = useCallback((code) => {
+    setLang(code);
+    saveLang(code);
+  }, []);
+
+  useEffect(() => {
+    document.title = t.metaTitle;
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute("content", t.metaDescription);
+  }, [t]);
 
   const THALI_DATE = "2026-08-23T09:47:00+05:30";
   const { days, hours, minutes, seconds } = useCountdown(THALI_DATE);
@@ -372,7 +402,9 @@ export default function App() {
 
   return (
     <>
-      {showIntro && <IntroAnimation onDone={handleDone} />}
+      {showIntro && <IntroAnimation onDone={handleDone} t={t} />}
+
+      <LanguageSwitcher lang={lang} onChange={changeLang} />
 
       <BackgroundMusic play={!showIntro} />
 
@@ -398,32 +430,29 @@ export default function App() {
             <div className="hero-border" />
             <p className="hero-om">🕉</p>
             <p className="hero-sivamayam">
-              <ShimmerText>|| சிவமயம் ||</ShimmerText>
+              <ShimmerText>{t.sivamayam}</ShimmerText>
             </p>
-            <p className="hero-subtitle">WITH JOYFUL HEARTS WE INVITE YOU TO THE WEDDING OF</p>
+            <p className="hero-subtitle">{t.subtitle}</p>
 
             <div className="hero-names">
               <div className="hero-name-block">
-                <span className="hero-name-ta animate-text-glow">குகீந்தன்</span>
-                <span className="hero-name-en">Kukeenthan</span>
+                <span className="hero-name-ta animate-text-glow">{t.groomName}</span>
               </div>
               <span className="hero-ampersand animated-amp">&amp;</span>
               <div className="hero-name-block">
-                <span className="hero-name-ta animate-text-glow">பிரதியா</span>
-                <span className="hero-name-en">Prathiya</span>
+                <span className="hero-name-ta animate-text-glow">{t.brideName}</span>
               </div>
             </div>
 
             <GoldDivider symbol="💍" />
 
             <StaggerReveal>
-              <p className="hero-date-ta stagger-child">ஞாயிறு, ஆகஸ்ட் 23, 2026</p>
-              <p className="hero-date-en stagger-child">Sunday · 23rd August 2026</p>
-              <p className="hero-venue-short stagger-child">விஸ்வநாத சுவாமி கோவில் · திருகோணமலை</p>
+              <p className="hero-date-ta stagger-child">{t.dateShort}</p>
+              <p className="hero-venue-short stagger-child">{t.venueShort}</p>
             </StaggerReveal>
             <div className="hero-border" style={{ marginTop: 28 }} />
           </div>
-          <ScrollIndicator />
+          <ScrollIndicator t={t} />
         </header>
 
         {/* ── Poem ── */}
@@ -431,14 +460,9 @@ export default function App() {
           <GoldDivider />
           <OrnamentFrame>
             <div className="poem-body">
-              <p>மண்ணோடு விதை சேர்ந்து</p>
-              <p>மணத்தோடு மலர் பூத்தது போல்</p>
-              <p>மனதோடு மனம் சேர்ந்து</p>
-              <p>மணம் வீசும் இம்மங்கல திருமணநாளில்</p>
-              <p>மகத்தான வாழ்வில் மாலையிட்டு</p>
-              <p>மனதை பரிமாறும் வேளையில்</p>
-              <p>அன்பினால் உரமிட்டு</p>
-              <p>இவ்விதைக்கு வளம் சேர்க்க</p>
+              {t.poem.map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
             </div>
           </OrnamentFrame>
           <GoldDivider />
@@ -447,16 +471,14 @@ export default function App() {
         {/* ── Parents ── */}
         <FadeSection className="parents-section" direction="up">
           <h2 className="section-heading">
-            <ShimmerText>குடும்பம் · Family</ShimmerText>
+            <ShimmerText>{t.familyHeading}</ShimmerText>
           </h2>
           <div className="parents-grid">
             <div className="parent-card glass-card">
               <div className="card-shine" />
-              <p className="parent-role">மணமகன் பெற்றோர்</p>
-              <p className="parent-role-en">Groom's Parents</p>
-              <p className="parent-names">திரு. தியாகராசா</p>
-              <p className="parent-names">&amp; திருமதி. மஞ்சுளாதேவி</p>
-              <p className="parent-child-label">தம்பதிகளின் புதல்வன் திருநிறைச்செல்வன்</p>
+              <p className="parent-role">{t.groomParentsRole}</p>
+              <p className="parent-names">{t.groomParentsNames}</p>
+              <p className="parent-child-label">{t.groomChildLabel}</p>
             </div>
 
             <div className="parent-divider-v">
@@ -467,11 +489,9 @@ export default function App() {
 
             <div className="parent-card glass-card">
               <div className="card-shine" />
-              <p className="parent-role">மணமகள் பெற்றோர்</p>
-              <p className="parent-role-en">Bride's Parents</p>
-              <p className="parent-names">திரு. சிவயோகநாயகம்</p>
-              <p className="parent-names">&amp; திருமதி. சாந்திமதி</p>
-              <p className="parent-child-label">தம்பதிகளின் புதல்வி திருநிறைச்செல்வி</p>
+              <p className="parent-role">{t.brideParentsRole}</p>
+              <p className="parent-names">{t.brideParentsNames}</p>
+              <p className="parent-child-label">{t.brideChildLabel}</p>
             </div>
           </div>
         </FadeSection>
@@ -480,12 +500,11 @@ export default function App() {
         <FadeSection className="portraits" direction="up">
           <div className="portrait-card portrait-groom">
             <div className="portrait-frame frame-groom">
-              <img src={GROOM_IMG} alt="Groom Kukeenthan" />
+              <img src={GROOM_IMG} alt={t.altGroom} />
               <div className="portrait-shimmer" />
             </div>
-            <p className="portrait-name-ta">குகீந்தன்</p>
-            <p className="portrait-name-en">Kukeenthan</p>
-            <p className="portrait-parents">திரு. தியாகராசா & திருமதி. மஞ்சுளாதேவி அவர்களின் புதல்வன்</p>
+            <p className="portrait-name-ta">{t.groomName}</p>
+            <p className="portrait-parents">{t.groomParentsShort}</p>
           </div>
 
           <div className="portrait-heart">
@@ -498,12 +517,11 @@ export default function App() {
 
           <div className="portrait-card portrait-bride">
             <div className="portrait-frame frame-bride">
-              <img src={BRIDE_IMG} alt="Bride Prathiya" />
+              <img src={BRIDE_IMG} alt={t.altBride} />
               <div className="portrait-shimmer" />
             </div>
-            <p className="portrait-name-ta">பிரதியா</p>
-            <p className="portrait-name-en">Prathiya</p>
-            <p className="portrait-parents">திரு. சிவயோகநாயகம் & திருமதி. சாந்திமதி அவர்களின் புதல்வி</p>
+            <p className="portrait-name-ta">{t.brideName}</p>
+            <p className="portrait-parents">{t.brideParentsShort}</p>
           </div>
         </FadeSection>
 
@@ -515,11 +533,11 @@ export default function App() {
               className="couple-frame"
               style={{ filter: `blur(${coupleBlur}px)`, transform: `scale(${1 + coupleBlur * 0.005})` }}
             >
-              <img src={COUPLE_IMG} alt="Kukeenthan & Prathiya" />
+              <img src={COUPLE_IMG} alt={t.altCouple} />
               <div className="couple-glow" />
             </div>
             <div className="couple-reveal-overlay" style={{ opacity: coupleBlur * 0.03 }}>
-              <span className="couple-reveal-text">குகீந்தன் ❤ பிரதியா</span>
+              <span className="couple-reveal-text">{t.groomName} ❤ {t.brideName}</span>
             </div>
           </div>
           <GoldDivider symbol="🌸" />
@@ -528,55 +546,51 @@ export default function App() {
         {/* ── Venue & Times ── */}
         <FadeSection className="events-section" direction="up">
           <h2 className="section-heading">
-            <ShimmerText>நிகழ்வுகள் · Events</ShimmerText>
+            <ShimmerText>{t.eventsHeading}</ShimmerText>
           </h2>
 
           <div className="events-grid">
             <div className="event-card glass-card">
               <div className="card-shine" />
               <span className="event-icon">🛕</span>
-              <h3 className="event-title-ta">திருமண விழா</h3>
-              <h3 className="event-title-en">Wedding Ceremony</h3>
+              <h3 className="event-title-ta">{t.ceremonyTitle}</h3>
               <div className="event-times">
                 <div className="event-time-row">
-                  <span className="time-label">🪬 தாலிகட்டும் நேரம்</span>
-                  <span className="time-value">காலை 9:47 – 11:47 AM</span>
+                  <span className="time-label">🪬 {t.ceremonyTimeLabel}</span>
+                  <span className="time-value">{t.ceremonyTime}</span>
                 </div>
               </div>
-              <p className="event-venue-ta">திரு விஸ்வநாத சுவாமி திருமண மண்டபம்</p>
-              <p className="event-venue-en">Thiru Viswanatha Swamy Wedding Mandapam</p>
-              <p className="event-address">சிவன் கோவில், திருகோணமலை</p>
+              <p className="event-venue-ta">{t.ceremonyVenueName}</p>
+              <p className="event-address">{t.ceremonyVenueAddress}</p>
               <a
                 href="https://maps.app.goo.gl/MSCyQnqJTUPRnhsU6"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="map-btn"
               >
-                📍 Google Maps
+                📍 {t.mapBtn}
               </a>
             </div>
 
             <div className="event-card glass-card">
               <div className="card-shine" />
               <span className="event-icon">🍽️</span>
-              <h3 className="event-title-ta">விருந்து உபசாரம்</h3>
-              <h3 className="event-title-en">Reception Lunch</h3>
+              <h3 className="event-title-ta">{t.receptionTitle}</h3>
               <div className="event-times">
                 <div className="event-time-row">
-                  <span className="time-label">🍽️ உணவு நேரம்</span>
-                  <span className="time-value">பகல் 12:00 PM</span>
+                  <span className="time-label">🍽️ {t.receptionTimeLabel}</span>
+                  <span className="time-value">{t.receptionTime}</span>
                 </div>
               </div>
-              <p className="event-venue-ta">SSS திருமண மண்டபம்</p>
-              <p className="event-venue-en">SSS Wedding Hall</p>
-              <p className="event-address">முருகாபுரி, திருகோணமலை</p>
+              <p className="event-venue-ta">{t.receptionVenueName}</p>
+              <p className="event-address">{t.receptionVenueAddress}</p>
               <a
                 href="https://maps.app.goo.gl/2yn62AFT8wXvYb2n8"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="map-btn"
               >
-                📍 Google Maps
+                📍 {t.mapBtn}
               </a>
             </div>
           </div>
@@ -585,17 +599,17 @@ export default function App() {
         {/* ── Countdown ── */}
         <FadeSection className="countdown-section" direction="up">
           <h2 className="section-heading">
-            <ShimmerText>தாலிகட்டும் நேரம் வரை</ShimmerText>
+            <ShimmerText>{t.countdownHeading}</ShimmerText>
           </h2>
-          <p className="countdown-sub">23 August 2026 · 9:47 AM</p>
+          <p className="countdown-sub">{t.countdownSub}</p>
           <div className="countdown-row">
-            <CountdownBox label="Days" labelTa="நாட்கள்" value={days} />
+            <CountdownBox label={t.countdownLabels.days} value={days} />
             <span className="countdown-separator">:</span>
-            <CountdownBox label="Hours" labelTa="மணி" value={hours} />
+            <CountdownBox label={t.countdownLabels.hours} value={hours} />
             <span className="countdown-separator">:</span>
-            <CountdownBox label="Minutes" labelTa="நிமிடம்" value={minutes} />
+            <CountdownBox label={t.countdownLabels.minutes} value={minutes} />
             <span className="countdown-separator">:</span>
-            <CountdownBox label="Seconds" labelTa="வினாடி" value={seconds} />
+            <CountdownBox label={t.countdownLabels.seconds} value={seconds} />
           </div>
         </FadeSection>
 
@@ -603,11 +617,12 @@ export default function App() {
         <FadeSection className="blessing-section" direction="up">
           <OrnamentFrame className="blessing-frame">
             <p className="blessing-text">
-              இரு இதயங்கள் ஒன்றாகும் இந்த மங்கள தருணத்தில்
-              <br />
-              உங்களின் அன்பான வாழ்த்துக்களும் ஆசிகளும்
-              <br />
-              எங்களுக்கு மிகவும் விலைமதிப்பற்றவை
+              {t.blessing.map((line, i) => (
+                <span key={i}>
+                  {line}
+                  {i < t.blessing.length - 1 && <br />}
+                </span>
+              ))}
             </p>
           </OrnamentFrame>
         </FadeSection>
@@ -616,11 +631,11 @@ export default function App() {
         <footer className="invitation-footer">
           <GoldDivider />
           <p className="footer-names">
-            <ShimmerText>குகீந்தன் &amp; பிரதியா</ShimmerText>
+            <ShimmerText>{t.groomName} &amp; {t.brideName}</ShimmerText>
           </p>
-          <p className="footer-date">Sunday · 23rd August 2026 · Trincomalee</p>
-          <p className="footer-family">தியாகராசா &amp; சிவயோகநாயகம் குடும்பம்</p>
-          <p className="footer-bless">வாழ்க வளமுடன் 🌺</p>
+          <p className="footer-date">{t.footerDate}</p>
+          <p className="footer-family">{t.footerFamily}</p>
+          <p className="footer-bless">{t.footerBless}</p>
           <GoldDivider />
           <div className="footer-mandala" />
         </footer>
