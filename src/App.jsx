@@ -39,6 +39,24 @@ function useFadeIn(threshold = 0.1) {
 }
 
 // ── Scroll blur reveal hook ───────────────────────────────────────────────────
+function useIsScrolling(idleDelay = 500) {
+  const [scrolling, setScrolling] = useState(false);
+  useEffect(() => {
+    let timeoutId;
+    const handler = () => {
+      setScrolling(true);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setScrolling(false), idleDelay);
+    };
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handler);
+      clearTimeout(timeoutId);
+    };
+  }, [idleDelay]);
+  return scrolling;
+}
+
 function useScrollBlur() {
   const ref = useRef(null);
   const [blur, setBlur] = useState(20);
@@ -78,7 +96,7 @@ function useParallax(speed = 0.3) {
 }
 
 // ── Background music player ───────────────────────────────────────────────────
-function BackgroundMusic({ play }) {
+function BackgroundMusic({ play, fading }) {
   const audioRef = useRef(null);
   const [muted, setMuted] = useState(false);
   const [started, setStarted] = useState(false);
@@ -105,7 +123,11 @@ function BackgroundMusic({ play }) {
     <>
       <audio ref={audioRef} src="/assets/nathaswaram.mp3" loop preload="auto" />
       {started && (
-        <button className="music-toggle" onClick={toggle} aria-label={muted ? "Unmute" : "Mute"}>
+        <button
+          className={`music-toggle ${fading ? "fixed-overlay-fade" : ""}`}
+          onClick={toggle}
+          aria-label={muted ? "Unmute" : "Mute"}
+        >
           {muted ? (
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M11 5L6 9H2v6h4l5 4V5z" />
@@ -128,9 +150,13 @@ function BackgroundMusic({ play }) {
 }
 
 // ── Language switcher ─────────────────────────────────────────────────────────
-function LanguageSwitcher({ lang, onChange }) {
+function LanguageSwitcher({ lang, onChange, fading }) {
   return (
-    <div className="lang-switcher" role="group" aria-label="Language">
+    <div
+      className={`lang-switcher ${fading ? "fixed-overlay-fade" : ""}`}
+      role="group"
+      aria-label="Language"
+    >
       {LANGS.map(({ code, label }) => (
         <button
           key={code}
@@ -379,6 +405,7 @@ function ScrollIndicator({ t }) {
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [showIntro, setShowIntro] = useState(true);
+  const isScrolling = useIsScrolling();
   const [heroRef, heroOffset] = useParallax(0.15);
   const [coupleBlurRef, coupleBlur] = useScrollBlur();
   const [lang, setLang] = useState(detectLang);
@@ -404,9 +431,9 @@ export default function App() {
     <>
       {showIntro && <IntroAnimation onDone={handleDone} t={t} />}
 
-      <LanguageSwitcher lang={lang} onChange={changeLang} />
+      <LanguageSwitcher lang={lang} onChange={changeLang} fading={isScrolling} />
 
-      <BackgroundMusic play={!showIntro} />
+      <BackgroundMusic play={!showIntro} fading={isScrolling} />
 
       <div className={`invitation ${showIntro ? "invitation-hidden" : ""}`}>
         <FloatingParticles />

@@ -1395,6 +1395,20 @@
   .countdown-separator { display: none; }
 }
 
+/* Fixed overlays (lang switcher, music toggle) sit on top of scrolling content
+   on narrow screens; step aside while actively scrolling so nothing stays hidden
+   behind them, then reappear once scrolling settles. */
+@media (max-width: 640px) {
+  .lang-switcher,
+  .music-toggle {
+    transition: opacity 0.3s ease;
+  }
+  .fixed-overlay-fade {
+    opacity: 0.15;
+    pointer-events: none;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════ SMOOTH SCROLL */
 html {
   scroll-behavior: smooth;
